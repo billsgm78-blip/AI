@@ -1,8 +1,155 @@
-<!doctype html><html lang="uz"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jarvis</title><style>
-*{box-sizing:border-box}body{margin:0;background:#080d18;color:#eef3ff;font:16px system-ui;min-height:100dvh;display:grid;place-items:center}.app{width:min(760px,100%);height:100dvh;max-height:900px;display:flex;flex-direction:column;background:#0d1422;border:1px solid #26334a;border-radius:20px;overflow:hidden}.top{padding:18px 22px;border-bottom:1px solid #26334a;display:flex;justify-content:space-between}.top b{font-size:20px}.download{background:#477fff;color:#fff;text-decoration:none;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:650}.feed{padding:20px;overflow:auto;flex:1}.msg{white-space:pre-wrap;margin:10px 0;padding:14px 16px;border-radius:16px;max-width:90%;background:#172236}.me{margin-left:auto;background:#244b91}.actions{padding:0 20px}.bar{display:flex;padding:14px;gap:10px;border-top:1px solid #26334a}input,button{font:inherit;border:0;border-radius:12px;padding:13px}input{flex:1;min-width:0;background:#172236;color:white}button{background:#477fff;color:white;cursor:pointer}button.alt{background:#394968;margin:4px}.small{font-size:12px;color:#aab8d0}@media(max-width:600px){.app{border:0;border-radius:0}}
-</style><div class="app"><header class="top"><b>✦ JARVIS</b><a class="download" href="https://github.com/billsgm78-blip/AI/releases/latest/download/JarvisAgent.exe">Jarvisni yuklash</a><span class="small">Shaxsiy yordamchi</span></header><main id="feed" class="feed"><div class="msg">Salom! Men Jarvisman. Internetdan qidirish yoki kompyuteringizda amal bajarishni so‘rang.</div></main><section id="actions" class="actions"></section><form id="form" class="bar"><input id="text" placeholder="Jarvisga yozing…" autocomplete="off"><button>Yuborish</button><button type="button" id="mic" class="alt">🎙️</button></form></div><script>
-const feed=document.querySelector('#feed'),input=document.querySelector('#text'),actions=document.querySelector('#actions');let token=localStorage.jarvisToken||prompt('Shaxsiy kirish kaliti');if(token){localStorage.jarvisToken=token}
-function bubble(t,me=false){let d=document.createElement('div');d.className='msg'+(me?' me':'');d.textContent=t;feed.append(d);feed.scrollTop=feed.scrollHeight}
-async function send(t){if(!t.trim())return;bubble(t,true);input.value='';let r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({message:t})});let d=await r.json();bubble(d.reply||d.detail||'Xatolik');for(let x of d.pending||[]){let b=document.createElement('button');b.className='alt';b.textContent='Tasdiqlash: '+x.action+' — '+x.value;b.onclick=async()=>{await fetch('/api/desktop/'+x.id,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({approved:true})});b.remove();bubble('Kompyuterga yuborildi.')};actions.append(b)}}
-document.querySelector('#form').onsubmit=e=>{e.preventDefault();send(input.value)};document.querySelector('#mic').onclick=()=>{let S=window.SpeechRecognition||window.webkitSpeechRecognition;if(!S)return bubble('Ovozli kiritish brauzeringizda qo‘llanmaydi.');let s=new S();s.lang='uz-UZ';s.onresult=e=>send(e.results[0][0].transcript);s.start()};
-</script></html>
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080d18;color:#eef3ff;font:16px system-ui;min-height:100dvh;display:grid;place-items:center}
+.app{width:min(760px,100%);height:100dvh;max-height:900px;display:flex;flex-direction:column;background:#0d1422;border:1px solid #26334a;border-radius:20px;overflow:hidden}
+.top{padding:16px 20px;border-bottom:1px solid #26334a;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top b{font-size:20px}
+.download{background:#477fff;color:#fff;text-decoration:none;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:650;white-space:nowrap}
+.small{font-size:12px;color:#aab8d0}
+.auth{padding:10px 20px;border-bottom:1px solid #26334a}
+.auth summary{cursor:pointer;color:#c7d5ef}
+.authrow{display:flex;gap:8px;margin-top:10px}
+.auth input{flex:1;min-width:0;background:#172236;color:white}
+.authstatus{margin:8px 0 2px}
+.feed{padding:20px;overflow:auto;flex:1}
+.msg{white-space:pre-wrap;margin:10px 0;padding:14px 16px;border-radius:16px;max-width:90%;background:#172236}
+.me{margin-left:auto;background:#244b91}
+.actions{padding:0 20px}
+.bar{display:flex;padding:14px;gap:8px;border-top:1px solid #26334a}
+input,button{font:inherit;border:0;border-radius:12px;padding:12px}
+button{background:#477fff;color:white;cursor:pointer}
+button.alt{background:#394968}
+.bar input{flex:1;min-width:0;background:#172236;color:white}
+@media(max-width:600px){.app{border:0;border-radius:0}.top{padding:12px}.top .small{display:none}.auth{padding:8px 12px}.feed{padding:12px}.bar{padding:10px}.download{padding:9px 10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <b>✦ JARVIS</b>
+  <span class="small" id="authBadge">Kirish kodi sozlanmagan</span>
+  <a class="download" href="https://github.com/billsgm78-blip/AI/releases/latest/download/JarvisAgent.exe">Jarvisni yuklash</a>
+</header>
+<details class="auth" id="authPanel">
+  <summary>Kirish kodini sozlash</summary>
+  <form class="authrow" id="authForm">
+    <input id="tokenInput" type="password" placeholder="JARVIS_ACCESS_TOKEN" autocomplete="off">
+    <button>Saqlash</button>
+    <button type="button" id="clearToken" class="alt">Tozalash</button>
+  </form>
+  <div class="small authstatus" id="authStatus">Railway → web xizmati → Variables bo‘limidagi JARVIS_ACCESS_TOKEN kodini kiriting. Bu OpenAI API kaliti emas.</div>
+</details>
+<main id="feed" class="feed">
+  <div class="msg">Salom! Men Jarvisman. Internetdan qidirish yoki kompyuteringizda amal bajarishni so‘rang.</div>
+</main>
+<section id="actions" class="actions"></section>
+<form id="form" class="bar">
+  <input id="text" placeholder="Jarvisga yozing…" autocomplete="off">
+  <button>Yuborish</button>
+  <button type="button" id="mic" class="alt" aria-label="Ovozli kiritish">🎙️</button>
+</form>
+</div>
+<script>
+const feed=document.querySelector('#feed');
+const input=document.querySelector('#text');
+const actions=document.querySelector('#actions');
+const authPanel=document.querySelector('#authPanel');
+const tokenInput=document.querySelector('#tokenInput');
+const authStatus=document.querySelector('#authStatus');
+const authBadge=document.querySelector('#authBadge');
+let token=localStorage.getItem('jarvisToken')||'';
+tokenInput.value=token;
+function setAuthStatus(text){authStatus.textContent=text}
+function refreshAuth(){
+  authBadge.textContent=token?'Kirish kodi saqlandi':'Kirish kodi kerak';
+  if(!token)authPanel.open=true;
+}
+refreshAuth();
+function bubble(text,me=false){
+  const d=document.createElement('div');
+  d.className='msg'+(me?' me':'');
+  d.textContent=text;
+  feed.append(d);
+  feed.scrollTop=feed.scrollHeight;
+}
+document.querySelector('#authForm').onsubmit=e=>{
+  e.preventDefault();
+  token=tokenInput.value.trim();
+  if(!token){setAuthStatus('Kirish kodi bo‘sh bo‘lmasin.');refreshAuth();return}
+  localStorage.setItem('jarvisToken',token);
+  setAuthStatus('Kirish kodi saqlandi. Xabar yuborib ko‘ring.');
+  refreshAuth();
+};
+document.querySelector('#clearToken').onclick=()=>{
+  token='';
+  tokenInput.value='';
+  localStorage.removeItem('jarvisToken');
+  setAuthStatus('Kirish kodi o‘chirildi.');
+  refreshAuth();
+};
+async function api(path,body){
+  if(!token){
+    authPanel.open=true;
+    tokenInput.focus();
+    throw new Error('Avval kirish kodini kiriting.');
+  }
+  const response=await fetch(path,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify(body)
+  });
+  const data=await response.json().catch(()=>({}));
+  if(response.status===401){
+    authPanel.open=true;
+    tokenInput.focus();
+    setAuthStatus('Kirish kodi noto‘g‘ri. Railway → web → Variables ichidan JARVIS_ACCESS_TOKEN ni tekshiring.');
+    throw new Error('Kirish kodi noto‘g‘ri. Sozlamadagi kodni yangilab ko‘ring.');
+  }
+  if(!response.ok)throw new Error(data.detail||'So‘rov bajarilmadi.');
+  return data;
+}
+async function send(text){
+  if(!text.trim())return;
+  bubble(text,true);
+  input.value='';
+  try{
+    const data=await api('/api/chat',{message:text});
+    bubble(data.reply||'Javob bo‘sh qaytdi.');
+    for(const task of data.pending||[]){
+      const button=document.createElement('button');
+      button.className='alt';
+      button.textContent='Tasdiqlash: '+task.action+' — '+task.value;
+      button.onclick=async()=>{
+        button.disabled=true;
+        try{
+          await api('/api/desktop/'+task.id,{approved:true});
+          button.remove();
+          bubble('Kompyuterga yuborildi.');
+        }catch(error){
+          button.disabled=false;
+          bubble(error.message);
+        }
+      };
+      actions.append(button);
+    }
+  }catch(error){bubble(error.message||'Ulanishda xatolik yuz berdi.')}
+}
+document.querySelector('#form').onsubmit=e=>{e.preventDefault();send(input.value)};
+document.querySelector('#mic').onclick=()=>{
+  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Speech){bubble('Ovozli kiritish brauzeringizda qo‘llanmaydi.');return}
+  const recognition=new Speech();
+  recognition.lang='uz-UZ';
+  recognition.onresult=e=>send(e.results[0][0].transcript);
+  recognition.onerror=()=>bubble('Mikrofondan matn olinmadi. Matn yozib yuboring.');
+  recognition.start();
+};
+</script>
+</body>
+</html>

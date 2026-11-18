@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths: ["desktop/**", ".github/workflows/windows-exe.yml"]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: windows-latest
@@ -17,3 +19,9 @@ jobs:
         with:
           name: JarvisAgent-windows
           path: dist/JarvisAgent.exe
+      - name: Publish permanent download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create latest dist/JarvisAgent.exe --title "Jarvis for Windows" --notes "Windows companion for Jarvis." --target "$GITHUB_SHA" --latest || gh release upload latest dist/JarvisAgent.exe --clobber

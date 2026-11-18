@@ -1,21 +1,25 @@
 # Jarvis — personal AI assistant
 
-Personal assistant project for a phone-friendly web app and a Windows companion agent.
+A phone-friendly Uzbek chat site with a Windows companion agent.
 
-## Planned components
+## Components
 
-- `web/`: responsive chat interface for phone and desktop.
-- `server/`: authenticated API, web search, and pairing between the web app and the user's Windows agent.
-- `desktop/`: Windows companion, packaged as an `.exe` through GitHub Actions.
+- `web/`: responsive chat website with voice input on supported mobile browsers.
+- `server.py`: Railway API, OpenAI Responses API with web search, and queued desktop actions.
+- `desktop/`: Windows companion. It connects to the Railway service and handles only the allowlisted actions requested by the website.
 
-## Safety model
+## Railway setup
 
-The desktop companion will only accept commands from a paired account and will ask for confirmation before actions that change files, send messages, install software, or otherwise have lasting effects. It will not expose an unrestricted remote shell.
+Set these service variables in Railway:
 
-## Deployment
+- `OPENAI_API_KEY`: OpenAI API key (keep it private).
+- `JARVIS_ACCESS_TOKEN`: private passcode for the website.
+- `JARVIS_AGENT_KEY`: private key used by the Windows companion.
 
-The API is intended for Railway. Add provider credentials as Railway environment variables; never commit tokens or passwords. The website can be served by the API or deployed separately once hosting is connected.
+After changing variables, deploy the service. Website: https://web-production-2e76118f.up.railway.app/
 
-## Status
+## Windows companion
 
-Project scaffold is being prepared. Railway credentials and an AI provider key are required before a live assistant can answer requests. The Windows executable will be produced by the release workflow after the desktop component is implemented.
+Download `JarvisAgent.exe` from the latest GitHub release. On first launch enter the Railway service URL and the value of `JARVIS_AGENT_KEY` from Railway Variables. The key is saved in Windows Credential Manager. Keep the agent running while you want to control the computer from the website.
+
+Computer actions are restricted to opening HTTPS pages, launching a small allowlist of apps, typing text into the active window, and a limited set of keyboard shortcuts. Each website-requested action requires your approval before it is sent to the agent. The companion does not accept shell commands.
